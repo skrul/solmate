@@ -2,7 +2,10 @@
 
 import logging
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
+    BinarySensorEntity,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -23,8 +26,13 @@ class MockFastChargeButton(BinarySensorEntity):
 
     _attr_name = "Mock Fast Charge Button"
     _attr_unique_id = "mock_fast_charge_button"
-    # _attr_device_class = BinarySensorDeviceClass
+    _attr_device_class = BinarySensorDeviceClass.POWER
 
     def __init__(self) -> None:
         """Initialize the binary sensor."""
         self._attr_is_on = False
+
+    async def async_set_native_value(self, value: bool) -> None:
+        """Update the current value."""
+        self._attr_is_on = bool(value)
+        self.async_write_ha_state()

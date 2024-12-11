@@ -2,94 +2,99 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import logging
 from typing import Any
 
 import voluptuous as vol
 
 from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.schema_config_entry_flow import (
+    SchemaCommonFlowHandler,
+    SchemaConfigFlowHandler,
+    SchemaFlowFormStep,
+)
 from homeassistant.helpers.selector import (
     DeviceSelector,
     DeviceSelectorConfig,
     EntitySelector,
     EntitySelectorConfig,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
 )
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+
+async def validate_input(
+    handler: SchemaCommonFlowHandler, user_input: dict[str, Any]
+) -> dict[str, Any]:
+    """Validate."""
+    return user_input
+
+
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required("home_consumption"): EntitySelector(
+        vol.Required("home_consumption_entity"): EntitySelector(
             EntitySelectorConfig(device_class=SensorDeviceClass.POWER)
         ),
-        vol.Required("pv_production"): EntitySelector(
+        vol.Required("pv_production_entity"): EntitySelector(
             EntitySelectorConfig(device_class=SensorDeviceClass.POWER)
         ),
-        vol.Required("home_battery_soc"): EntitySelector(
+        vol.Required("home_battery_soc_entity"): EntitySelector(
             EntitySelectorConfig(device_class=SensorDeviceClass.BATTERY)
         ),
         vol.Required("tesla_ble_device"): DeviceSelector(DeviceSelectorConfig()),
-        vol.Required("fast_charge_button"): EntitySelector(
+        vol.Required("fast_charge_button_entity"): EntitySelector(
             EntitySelectorConfig(domain="binary_sensor")
+        ),
+        vol.Required("battery_threshold", default=80): NumberSelector(
+            NumberSelectorConfig(
+                min=0,
+                max=100,
+                step=1,
+                unit_of_measurement="%",
+                mode=NumberSelectorMode.SLIDER,
+            )
+        ),
+        vol.Required("power_buffer", default=500): NumberSelector(
+            NumberSelectorConfig(
+                min=0,
+                max=2000,
+                unit_of_measurement="W",
+                mode=NumberSelectorMode.BOX,
+            )
         ),
     }
 )
 
-
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-    """Validate the user input allows us to connect.
-
-    Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
-    """
-    # TODO validate the data can be used to set up a connection.
-
-    return {"title": "Name of the device"}
-
-
-class ConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for solmate."""
-
-    VERSION = 1
-
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Handle the initial step."""
-        errors: dict[str, str] = {}
-        if user_input is not None:
-            try:
-                info = await validate_input(self.hass, user_input)
-            except Exception:
-                _LOGGER.exception("Unexpected exception")
-                errors["base"] = "unknown"
-            else:
-                return self.async_create_entry(title=info["title"], data=user_input)
-
-        return self.async_show_form(
-            step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
-        )
-
-    @staticmethod
-    def async_get_options_flow(config_entry):
-        """Get the options flow for this handler."""
-        return OptionsFlowHandler()
+CONFIG_FLOW = {
+    "user": SchemaFlowFormStep(
+        schema=STEP_USER_DATA_SCHEMA,
+        validate_user_input=validate_input,
+        # preview="mold_indicator",
+    ),
+}
+OPTIONS_FLOW = {
+    "init": SchemaFlowFormStep(
+        schema=STEP_USER_DATA_SCHEMA,
+        validate_user_input=validate_input,
+        # preview="mold_indicator",
+    )
+}
 
 
-class OptionsFlowHandler(OptionsFlow):
-    """Handle options flow for solmate integration."""
+class SolmateConfigFlowHandler(SchemaConfigFlowHandler, domain=DOMAIN):
+    """Handle a config flow for Solmate."""
 
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Manage the options."""
-        if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+    config_flow = CONFIG_FLOW
+    options_flow = OPTIONS_FLOW
 
-        return self.async_show_form(
-            step_id="init",
-            data_schema=STEP_USER_DATA_SCHEMA,
-        )
+    def async_config_entry_title(self, options: Mapping[str, Any]) -> str:
+        """Return config entry title."""
+        return "Solmate"
+        # return cast(str, options[CONF_NAME])
