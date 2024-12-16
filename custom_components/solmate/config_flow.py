@@ -9,7 +9,6 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.schema_config_entry_flow import (
     SchemaCommonFlowHandler,
     SchemaConfigFlowHandler,
@@ -76,14 +75,12 @@ CONFIG_FLOW = {
     "user": SchemaFlowFormStep(
         schema=STEP_USER_DATA_SCHEMA,
         validate_user_input=validate_input,
-        # preview="mold_indicator",
     ),
 }
 OPTIONS_FLOW = {
     "init": SchemaFlowFormStep(
         schema=STEP_USER_DATA_SCHEMA,
         validate_user_input=validate_input,
-        # preview="mold_indicator",
     )
 }
 

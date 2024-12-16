@@ -7,7 +7,6 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-# from homeassistant.helpers.typing import ConfigType
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
@@ -17,10 +16,6 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up solmate from a config entry."""
 
-    _LOGGER.info("Setting up solmate from a config entry")
-    _LOGGER.info(entry)
-    _LOGGER.info(entry.data)
-    _LOGGER.info(entry.options)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(config_entry_update_listener))
 

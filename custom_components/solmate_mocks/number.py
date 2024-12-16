@@ -2,6 +2,11 @@
 
 import logging
 
+from homeassistant.components.number import (
+    NumberEntity,
+    NumberEntityDescription,
+    NumberMode,
+)
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -9,10 +14,12 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfPower
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.storage import Store
+
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,49 +44,45 @@ async def async_setup_entry(
 
     async_add_entities(
         [
-            MockHomePowerSensor(hass, store),
-            MockPVProductionSensor(hass, store),
-            MockBatterySoCSensor(hass, store),
+            MockHomePowerSensor(hass, entry, store),
+            MockPVProductionSensor(hass, entry, store),
+            MockBatterySoCSensor(hass, entry, store),
         ]
     )
 
 
-class MockSensor(SensorEntity):
+class MockSensor(NumberEntity):
     """MockSensor."""
 
-    def __init__(self, hass: HomeAssistant, store: Store, store_key: str) -> None:
+    def __init__(
+        self, hass: HomeAssistant, entry: ConfigEntry, store: Store, store_key: str
+    ) -> None:
         """Initialize the sensor."""
         self._hass = hass
         self._store = store
         self._store_key = store_key
+        self._attr_device_info = DeviceInfo(
+            name="Solmate Mocks",
+            identifiers={(DOMAIN, entry.entry_id)},
+            entry_type=DeviceEntryType.SERVICE,
+        )
+
+    async def async_set_native_value(self, value):
+        """Update."""
+        self._attr_native_value = value
+        stored_states = await self._store.async_load() or {}
+        stored_states[self._store_key] = value
+        await self._store.async_save(stored_states)
 
     async def async_added_to_hass(self) -> None:
         """Load the stored state when added to hass."""
-
-        async def async_state_changed_listener(event: Event[EventStateChangedData]):
-            """Handle state changes."""
-            new_state = event.data["new_state"].state
-            self._attr_native_value = new_state
-            stored_states = await self._store.async_load() or {}
-            stored_states[self._store_key] = new_state
-            await self._store.async_save(stored_states)
-            self.async_write_ha_state()
-            self.async_schedule_update_ha_state(True)
-
-        self.async_on_remove(
-            async_track_state_change_event(
-                self._hass,
-                ["sensor.mock_pv_production"],
-                async_state_changed_listener,
-            )
-        )
 
         stored_states = await self._store.async_load()
         if stored_states and self._store_key in stored_states:
             self._attr_native_value = stored_states[self._store_key]
 
 
-class MockHomePowerSensor(SensorEntity):
+class MockHomePowerSensor(MockSensor):
     """Sensor for mocking home power consumption."""
 
     _attr_name = "Mock Home Power Consumption"
@@ -87,10 +90,13 @@ class MockHomePowerSensor(SensorEntity):
     _attr_native_unit_of_measurement = UnitOfPower.WATT
     _attr_device_class = SensorDeviceClass.POWER
     _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_mode = "auto"
+    _attr_native_min_value = 0
+    _attr_native_max_value = 100000
 
-    def __init__(self, hass: HomeAssistant, store: Store) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, store: Store) -> None:
         """Initialize the sensor."""
-        super().__init__(hass, store, "pv_production")
+        super().__init__(hass, entry, store, "home_power")
         self._attr_native_value = DEFAULT_VALUES["home_power"]
 
 
@@ -102,14 +108,16 @@ class MockPVProductionSensor(MockSensor):
     _attr_native_unit_of_measurement = UnitOfPower.WATT
     _attr_device_class = SensorDeviceClass.POWER
     _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_min_value = 0
+    _attr_native_max_value = 100000
 
-    def __init__(self, hass: HomeAssistant, store: Store) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, store: Store) -> None:
         """Initialize the sensor."""
-        super().__init__(hass, store, "pv_production")
+        super().__init__(hass, entry, store, "pv_production")
         self._attr_native_value = DEFAULT_VALUES["pv_production"]
 
 
-class MockBatterySoCSensor(SensorEntity):
+class MockBatterySoCSensor(MockSensor):
     """Sensor for mocking battery state of charge."""
 
     _attr_name = "Mock Battery SoC"
@@ -117,8 +125,10 @@ class MockBatterySoCSensor(SensorEntity):
     _attr_native_unit_of_measurement = "%"
     _attr_device_class = SensorDeviceClass.BATTERY
     _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_min_value = 0
+    _attr_native_max_value = 100
 
-    def __init__(self, hass: HomeAssistant, store: Store) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, store: Store) -> None:
         """Initialize the sensor."""
-        super().__init__(hass, store, "battery_soc")
+        super().__init__(hass, entry, store, "battery_soc")
         self._attr_native_value = DEFAULT_VALUES["battery_soc"]
