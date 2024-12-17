@@ -27,11 +27,17 @@ class SolmateController:
         self._state_change_callback_remover = None
         self._home_consumption_entity = entry.options["home_consumption_entity"]
         self._pv_production_entity = entry.options["pv_production_entity"]
+        self._home_battery_soc_entity = entry.options["home_battery_soc_entity"]
         self._power_buffer = entry.options["power_buffer"]
 
     def _state_changed_listener(self, event: Event[EventStateChangedData]):
         """Handle state changes."""
         _LOGGER.info("State changed: %s", event)
+        _LOGGER.info(event.data)
+        _LOGGER.info(event.data.entity_id)
+
+        # if event.data.entity_id == self._home_battery_soc_entity:
+        #     _LOGGER.info("Battery SOC changed: %s", event.data.new_state)
 
     def start(self) -> None:
         """Start the state machine."""
@@ -48,6 +54,7 @@ class SolmateController:
             [
                 self._home_consumption_entity,
                 self._pv_production_entity,
+                self._home_battery_soc_entity,
             ],
             async_state_changed_listener,
         )
