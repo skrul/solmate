@@ -21,7 +21,7 @@ class SolmateController:
         """Initialize the sensor."""
         self._hass = hass
         self._entry = entry
-        self._sm = SolmateStateMachine()
+        self._sm = SolmateStateMachine(hass)
         self._sm.add_listener(LogListener())
         self._sm.add_listener(EventProducingListener(hass, entry))
         self._state_change_callback_remover = None
@@ -32,12 +32,32 @@ class SolmateController:
 
     def _state_changed_listener(self, event: Event[EventStateChangedData]):
         """Handle state changes."""
-        _LOGGER.info("State changed: %s", event)
-        _LOGGER.info(event.data)
-        _LOGGER.info(event.data.entity_id)
+        if event.data["entity_id"] in [
+            self._home_consumption_entity,
+            self._pv_production_entity,
+            self._home_battery_soc_entity,
+        ]:
+            self._update_should_charge_on_surplus()
 
-        # if event.data.entity_id == self._home_battery_soc_entity:
-        #     _LOGGER.info("Battery SOC changed: %s", event.data.new_state)
+    def _update_should_charge_on_surplus(self):
+        try:
+            consumption = float(
+                self._hass.states.get(self._home_consumption_entity).state
+            )
+            production = float(self._hass.states.get(self._pv_production_entity).state)
+            surplus = production - consumption - self._power_buffer
+            target_amps = int((surplus * 0.9) / 240)
+            if target_amps >= 5:
+                self._sm.send(
+                    "start_charge_on_surplus", surplus=surplus, target_amps=target_amps
+                )
+            else:
+                self._sm.send(
+                    "stop_charge_on_surplus", surplus=surplus, target_amps=target_amps
+                )
+
+        except (ValueError, AttributeError) as err:
+            _LOGGER.error("Can't convert entity state to float: %s", err)
 
     def start(self) -> None:
         """Start the state machine."""

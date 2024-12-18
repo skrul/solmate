@@ -2,16 +2,8 @@
 
 import logging
 
-from homeassistant.components.number import (
-    NumberEntity,
-    NumberEntityDescription,
-    NumberMode,
-)
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorStateClass,
-)
+from homeassistant.components.number import NumberEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfPower
 from homeassistant.core import HomeAssistant
@@ -31,6 +23,7 @@ DEFAULT_VALUES = {
     "pv_production": 3000,
     "battery_soc": 75,
     "fast_charge": False,
+    "current_charging_amps": 0,
 }
 
 
@@ -47,6 +40,7 @@ async def async_setup_entry(
             MockHomePowerSensor(hass, entry, store),
             MockPVProductionSensor(hass, entry, store),
             MockBatterySoCSensor(hass, entry, store),
+            MockCurrentChargingAmpsSensor(hass, entry, store),
         ]
     )
 
@@ -132,3 +126,20 @@ class MockBatterySoCSensor(MockSensor):
         """Initialize the sensor."""
         super().__init__(hass, entry, store, "battery_soc")
         self._attr_native_value = DEFAULT_VALUES["battery_soc"]
+
+
+class MockCurrentChargingAmpsSensor(MockSensor):
+    """Sensor for mocking current charging amps."""
+
+    _attr_name = "Mock Current Charging Amps"
+    _attr_unique_id = "mock_current_charging_amps"
+    _attr_native_unit_of_measurement = "A"
+    _attr_device_class = SensorDeviceClass.CURRENT
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_min_value = 0
+    _attr_native_max_value = 48
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, store: Store) -> None:
+        """Initialize the sensor."""
+        super().__init__(hass, entry, store, "current_charging_amps")
+        self._attr_native_value = DEFAULT_VALUES["current_charging_amps"]

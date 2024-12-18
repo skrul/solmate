@@ -9,7 +9,11 @@ from homeassistant.helpers import device_registry as dr
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.NUMBER]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.NUMBER,
+    Platform.SWITCH,
+]
 DOMAIN = "solmate_mocks"
 MOCK_TESLA_DEVICE_ID = "mock_tesla_ble_device"
 
