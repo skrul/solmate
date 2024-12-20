@@ -24,6 +24,7 @@ DEFAULT_VALUES = {
     "battery_soc": 75,
     "fast_charge": False,
     "current_charging_amps": 0,
+    "requested_charging_amps": 0,
 }
 
 
@@ -41,6 +42,7 @@ async def async_setup_entry(
             MockPVProductionSensor(hass, entry, store),
             MockBatterySoCSensor(hass, entry, store),
             MockCurrentChargingAmpsSensor(hass, entry, store),
+            MockRequestedChargingAmpsSensor(hass, entry, store),
         ]
     )
 
@@ -143,3 +145,20 @@ class MockCurrentChargingAmpsSensor(MockSensor):
         """Initialize the sensor."""
         super().__init__(hass, entry, store, "current_charging_amps")
         self._attr_native_value = DEFAULT_VALUES["current_charging_amps"]
+
+
+class MockRequestedChargingAmpsSensor(MockSensor):
+    """Sensor for mocking requested charging amps."""
+
+    _attr_name = "Mock Requested Charging Amps"
+    _attr_unique_id = "mock_requested_charging_amps"
+    _attr_native_unit_of_measurement = "A"
+    _attr_device_class = SensorDeviceClass.CURRENT
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_min_value = 0
+    _attr_native_max_value = 48
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, store: Store) -> None:
+        """Initialize the sensor."""
+        super().__init__(hass, entry, store, "requested_charging_amps")
+        self._attr_native_value = DEFAULT_VALUES["requested_charging_amps"]

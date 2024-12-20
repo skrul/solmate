@@ -33,6 +33,8 @@ async def async_setup_entry(
                 entry.options["home_consumption_entity"],
                 entry.options["pv_production_entity"],
                 entry.options["power_buffer"],
+                entry.options["charger_switch_entity"],
+                entry.options["charger_current_charging_amps_entity"],
             ),
         ]
     )
@@ -80,12 +82,18 @@ class SurplusPowerSensor(SensorEntity):
         home_consumption_entity: str,
         pv_production_entity: str,
         power_buffer: int,
+        charger_switch_entity: str,
+        charger_current_charging_amps_entity: str,
     ) -> None:
         """Initialize the sensor."""
         self._hass = hass
         self._home_consumption_entity = home_consumption_entity
         self._pv_production_entity = pv_production_entity
         self._power_buffer = power_buffer
+        self._charger_switch_entity = charger_switch_entity
+        self._charger_current_charging_amps_entity = (
+            charger_current_charging_amps_entity
+        )
 
         self._attr_device_info = DeviceInfo(
             name="Solmate",

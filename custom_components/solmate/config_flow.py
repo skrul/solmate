@@ -47,11 +47,19 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required("home_battery_soc_entity"): EntitySelector(
             EntitySelectorConfig(device_class=SensorDeviceClass.BATTERY)
         ),
-        vol.Required("tesla_ble_device"): DeviceSelector(DeviceSelectorConfig()),
         vol.Required("fast_charge_button_entity"): EntitySelector(
             EntitySelectorConfig(domain="binary_sensor")
         ),
-        vol.Required("battery_threshold", default=80): NumberSelector(
+        vol.Required("charger_switch_entity"): EntitySelector(
+            EntitySelectorConfig(domain="switch")
+        ),
+        vol.Required("charger_requested_charging_amps_entity"): EntitySelector(
+            EntitySelectorConfig(device_class=SensorDeviceClass.CURRENT)
+        ),
+        vol.Required("charger_current_charging_amps_entity"): EntitySelector(
+            EntitySelectorConfig(device_class=SensorDeviceClass.CURRENT)
+        ),
+        vol.Required("home_battery_threshold", default=80): NumberSelector(
             NumberSelectorConfig(
                 min=0,
                 max=100,

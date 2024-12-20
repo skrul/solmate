@@ -21,21 +21,41 @@ class SolmateController:
         """Initialize the sensor."""
         self._hass = hass
         self._entry = entry
-        self._sm = SolmateStateMachine(hass)
-        self._sm.add_listener(LogListener())
-        self._sm.add_listener(EventProducingListener(hass, entry))
         self._state_change_callback_remover = None
         self._home_consumption_entity = entry.options["home_consumption_entity"]
         self._pv_production_entity = entry.options["pv_production_entity"]
         self._home_battery_soc_entity = entry.options["home_battery_soc_entity"]
         self._power_buffer = entry.options["power_buffer"]
+        self._charger_requested_charging_amps_entity = entry.options[
+            "charger_requested_charging_amps_entity"
+        ]
+        self._charger_current_charging_amps_entity = entry.options[
+            "charger_current_charging_amps_entity"
+        ]
+        self._charger_switch_entity = entry.options["charger_switch_entity"]
+
+        self._sm = SolmateStateMachine(
+            hass,
+            self._charger_requested_charging_amps_entity,
+            self._charger_switch_entity,
+        )
+        self._sm.add_listener(LogListener())
+        self._sm.add_listener(EventProducingListener(hass, entry))
 
     def _state_changed_listener(self, event: Event[EventStateChangedData]):
         """Handle state changes."""
+        if event.data["entity_id"] == self._charger_current_charging_amps_entity:
+            self._sm.current_charging_amps = float(event.data["new_state"].state)
+            self._sm.send(
+                "current_charging_amps_changed",
+                current_charging_amps=self._sm.current_charging_amps,
+            )
+
         if event.data["entity_id"] in [
             self._home_consumption_entity,
             self._pv_production_entity,
             self._home_battery_soc_entity,
+            self._charger_current_charging_amps_entity,
         ]:
             self._update_should_charge_on_surplus()
 
@@ -48,10 +68,12 @@ class SolmateController:
             surplus = production - consumption - self._power_buffer
             target_amps = int((surplus * 0.9) / 240)
             if target_amps >= 5:
+                _LOGGER.info("Send start_charge_on_surplus %s", target_amps)
                 self._sm.send(
                     "start_charge_on_surplus", surplus=surplus, target_amps=target_amps
                 )
             else:
+                _LOGGER.info("Send stop_charge_on_surplus %s", target_amps)
                 self._sm.send(
                     "stop_charge_on_surplus", surplus=surplus, target_amps=target_amps
                 )
@@ -75,6 +97,7 @@ class SolmateController:
                 self._home_consumption_entity,
                 self._pv_production_entity,
                 self._home_battery_soc_entity,
+                self._charger_current_charging_amps_entity,
             ],
             async_state_changed_listener,
         )
